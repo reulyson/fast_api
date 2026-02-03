@@ -1,3 +1,5 @@
+"""Testes para a camada de persistência (modelos e banco de dados)."""
+
 from dataclasses import asdict
 from datetime import datetime
 
