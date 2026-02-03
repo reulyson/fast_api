@@ -6,8 +6,11 @@ e as rotas da API.
 
 from http import HTTPStatus
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException
+from sqlalchemy import select
 
+from fast_api.database import get_session
+from fast_api.models import User
 from fast_api.schemas import (
     ErrorDetail,
     Message,
@@ -40,12 +43,37 @@ def read_root() -> Message:
     '/users/',
     status_code=HTTPStatus.CREATED,
     response_model=UserPublic,
+    responses={409: {'model': ErrorDetail}},
 )
-def create_user(user: UserSchema) -> UserPublic:
+def create_user(user: UserSchema, session=Depends(get_session)) -> UserPublic:
     """Cria um novo usuário."""
-    user_with_id = UserDB(id=len(database) + 1, **user.model_dump())
-    database.append(user_with_id)
-    return user_with_id
+
+    db_user: User | None = session.scalar(
+        select(User).where(
+            (User.username == user.username) | (User.email == user.email)
+        )
+    )
+
+    # Retorna Error
+    if db_user:
+        if db_user.username == user.username:
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT, detail='username já existe!'
+            )
+        elif db_user.email == user.email:
+            raise HTTPException(
+                status_code=HTTPStatus.CONFLICT, detail='email já existe!'
+            )
+
+    new_user = User(**user.model_dump())
+    # Registra o obj na sessão
+    session.add(new_user)
+    # Envia de fato para o database
+    session.commit()
+    # Atualiza o obj em relação ao database
+    session.refresh(new_user)
+
+    return new_user
 
 
 @app.get(

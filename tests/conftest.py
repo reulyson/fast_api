@@ -1,6 +1,5 @@
 """Fixtures para os testes."""
 
-from collections.abc import Generator
 from contextlib import contextmanager
 from datetime import datetime
 
@@ -8,25 +7,46 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 from fast_api.app import app
+from fast_api.database import get_session
 from fast_api.models import table_registry
 
 
 # Fixture para criar um cliente HTTP para testar a API
 @pytest.fixture
-def client() -> TestClient:
+def client(session):
     """Fixture para criar um cliente HTTP para testar a API."""
+
     # Arrange
-    return TestClient(app)
+    def get_session_overrides():
+        """Função que retorna a sessão criada para teste."""
+        return session
+
+    with TestClient(app) as client:
+        # troca a sessão prod para uma sessão test
+        app.dependency_overrides[get_session] = get_session_overrides
+        yield client
+    # restaura as dependências originais da aplicação
+    app.dependency_overrides.clear()
 
 
 # Fixture para criar uma sessão de teste
 @pytest.fixture
-def session() -> Generator[Session, None, None]:
+def session():
     """Fixture para criar uma sessão de teste."""
     # cria um motor de conexão com o banco de dados em memória
-    engine = create_engine('sqlite:///:memory:')
+    engine = create_engine(
+        # banco em memória, isolado por teste, sem arquivo
+        'sqlite:///:memory:',
+        # permite usar a conexão em outra thread
+        #   (TestClient roda requisições em thread diferente da fixture)
+        connect_args={'check_same_thread': False},
+        # uma única conexão compartilhada para o banco em memória
+        #   (evita múltiplos bancos vazios com :memory:)
+        poolclass=StaticPool,
+    )
     # cria todas as tabelas no banco de dados
     table_registry.metadata.create_all(engine)
     # cria uma sessão de teste
