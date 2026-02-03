@@ -4,7 +4,7 @@ from http import HTTPStatus
 
 
 def test_read_root(client) -> None:
-    """Testa se a rota raiz retorna a mensagem Hello, World
+    """Testa se a rota raiz retorna a mensagem Hello, World.
 
     Esse teste tem 3 partes (AAA - Arrange, Act, Assert):
     1. Arrange: configurar o teste
