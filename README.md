@@ -4,7 +4,15 @@ API REST desenvolvida com FastAPI.
 
 ## Descrição
 
-Este projeto é uma API moderna e de alta performance construída com **FastAPI**, seguindo as melhores práticas de desenvolvimento Python (PEP-8, PEP-257, PEP-484). Oferece um CRUD de usuários em memória e documentação OpenAPI automática.
+Este projeto é uma API moderna e de alta performance construída com **FastAPI**, seguindo as melhores práticas de desenvolvimento Python (PEP-8, PEP-257, PEP-484). Oferece um CRUD de usuários em memória e documentação OpenAPI automática. Inclui camada de persistência com **SQLAlchemy** e **Alembic** para migrações de banco de dados.
+
+## Tecnologias
+
+- **FastAPI** — Framework web assíncrono
+- **SQLAlchemy** — ORM para banco de dados
+- **Pydantic** — Validação e serialização
+- **Alembic** — Migrações de banco
+- **pydantic-settings** — Configurações via variáveis de ambiente
 
 ## Pré-requisitos
 
@@ -40,6 +48,22 @@ cd fast_api
 ```bash
 poetry env use 3.13
 poetry install
+```
+
+### 5. Configurar variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto com a URL do banco de dados:
+
+```bash
+DATABASE_URL=sqlite:///./database.db
+```
+
+### 6. Executar migrações (opcional)
+
+Para criar/atualizar as tabelas no banco de dados:
+
+```bash
+alembic upgrade head
 ```
 
 ## Rotas da API
@@ -103,10 +127,18 @@ fast_api/
 ├── fast_api/
 │   ├── __init__.py
 │   ├── app.py          # Aplicação principal e rotas
-│   └── schemas.py      # Modelos Pydantic (Message, UserSchema, UserPublic, UserList, ErrorDetail)
+│   ├── models.py       # Modelos ORM (User) com SQLAlchemy
+│   ├── schemas.py      # Modelos Pydantic (Message, UserSchema, UserPublic, UserList, ErrorDetail)
+│   └── settings.py     # Configurações (DATABASE_URL) via pydantic-settings
+├── migrations/         # Migrações Alembic
+│   ├── env.py
+│   ├── script.py.mako
+│   └── versions/
 ├── tests/
-│   ├── conftest.py     # Fixtures (cliente de teste)
-│   └── test_app.py     # Testes da aplicação
+│   ├── conftest.py     # Fixtures (cliente, sessão, mock_db_time)
+│   ├── test_app.py     # Testes da API
+│   └── test_db.py      # Testes do banco de dados
+├── alembic.ini        # Configuração do Alembic
 ├── pyproject.toml     # Configurações do projeto
 ├── poetry.lock        # Lock das dependências
 └── README.md
@@ -118,6 +150,7 @@ fast_api/
 - **pytest**: Framework de testes
 - **pytest-cov**: Cobertura de testes
 - **taskipy**: Automação de tarefas (lint, format, test, run)
+- **Alembic**: Migrações de banco de dados
 
 ## Como Contribuir
 
