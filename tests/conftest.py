@@ -11,7 +11,7 @@ from sqlalchemy.pool import StaticPool
 
 from fast_api.app import app
 from fast_api.database import get_session
-from fast_api.models import table_registry
+from fast_api.models import User, table_registry
 
 
 # Fixture para criar um cliente HTTP para testar a API
@@ -55,6 +55,9 @@ def session():
         yield session
     # deleta todas as tabelas no banco de dados
     table_registry.metadata.drop_all(engine)
+    # Fecha as conexões abertas do SQLite e
+    # desmonta o pool do engine de teste
+    engine.dispose()
 
 
 @contextmanager
@@ -84,3 +87,15 @@ def _mock_db_time(*, model: type, time: datetime):
 def mock_db_time():
     """Fixture que retorna o context manager para mockar o tempo do banco."""
     return _mock_db_time
+
+
+@pytest.fixture
+def mock_user(session):
+    user = User(
+        username='teste', email='teste@teste.com', password='testeteste'
+    )
+    session.add(user)
+    session.commit()
+    session.refresh(user)
+
+    return user
