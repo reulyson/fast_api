@@ -4,7 +4,18 @@ API REST desenvolvida com FastAPI.
 
 ## Descrição
 
-Este projeto é uma API moderna e de alta performance construída com **FastAPI**, seguindo as melhores práticas de desenvolvimento Python (PEP-8, PEP-257, PEP-484). Oferece um CRUD de usuários em memória e documentação OpenAPI automática. Inclui camada de persistência com **SQLAlchemy** e **Alembic** para migrações de banco de dados.
+Este projeto é uma API moderna e de alta performance construída com **FastAPI**, seguindo as melhores práticas de desenvolvimento Python (PEP-8, PEP-257, PEP-484). Oferece um CRUD completo de usuários com persistência em banco de dados SQLite e documentação OpenAPI automática. Inclui camada de persistência com **SQLAlchemy** e **Alembic** para migrações de banco de dados.
+
+### Funcionalidades
+
+- ✅ CRUD completo de usuários (Create, Read, Update, Delete)
+- ✅ Validação de dados com Pydantic
+- ✅ Validação de unicidade (username e email únicos)
+- ✅ Paginação na listagem de usuários
+- ✅ Tratamento de erros com códigos HTTP apropriados
+- ✅ Documentação interativa (Swagger UI e ReDoc)
+- ✅ Testes automatizados com pytest
+- ✅ Migrações de banco de dados com Alembic
 
 ## Tecnologias
 
@@ -68,21 +79,41 @@ alembic upgrade head
 
 ## Rotas da API
 
-| Método   | Rota           | Descrição                    | Resposta   |
-|----------|----------------|------------------------------|------------|
-| GET      | `/`            | Mensagem de boas-vindas      | JSON       |
-| POST     | `/users/`      | Cria um usuário               | 201 + JSON |
-| GET      | `/users/`      | Lista todos os usuários       | JSON       |
-| GET      | `/users/{id}`  | Retorna um usuário pelo id    | JSON / 404 |
-| PUT      | `/users/{id}`  | Atualiza um usuário pelo id   | JSON / 404 |
-| DELETE   | `/users/{id}`  | Remove um usuário pelo id     | JSON / 404 |
+| Método   | Rota           | Descrição                    | Status Codes        |
+|----------|----------------|------------------------------|---------------------|
+| GET      | `/`            | Mensagem de boas-vindas      | 200                 |
+| POST     | `/users/`      | Cria um usuário               | 201, 409            |
+| GET      | `/users/`      | Lista todos os usuários       | 200                 |
+| GET      | `/users/{id}`  | Retorna um usuário pelo id    | 200, 404            |
+| PUT      | `/users/{id}`  | Atualiza um usuário pelo id   | 200, 404, 409       |
+| DELETE   | `/users/{id}`  | Remove um usuário pelo id     | 200, 404            |
+
+### Detalhamento das Rotas
 
 - **GET /** — Retorna `{"message": "Hello, World!"}`.
-- **POST /users/** — Body: `username`, `email`, `password`. Retorna o usuário criado (sem senha).
-- **GET /users/** — Retorna `{"users": [...]}`.
-- **GET /users/{user_id}** — Retorna o usuário ou 404.
-- **PUT /users/{user_id}** — Body: `username`, `email`, `password`. Retorna o usuário atualizado ou 404.
-- **DELETE /users/{user_id}** — Retorna o usuário removido ou 404.
+
+- **POST /users/** — Cria um novo usuário.
+  - **Body**: `{"username": "string", "email": "string", "password": "string"}`
+  - **Sucesso (201)**: Retorna o usuário criado (sem senha): `{"id": int, "username": "string", "email": "string"}`
+  - **Erro (409)**: Quando username ou email já existem: `{"detail": "username já existe!"}` ou `{"detail": "email já existe!"}`
+
+- **GET /users/** — Lista todos os usuários com paginação.
+  - **Query params**: `limit` (padrão: 10), `offset` (padrão: 0)
+  - **Resposta**: `{"users": [{"id": int, "username": "string", "email": "string"}, ...]}`
+
+- **GET /users/{user_id}** — Retorna um usuário específico.
+  - **Sucesso (200)**: `{"id": int, "username": "string", "email": "string"}`
+  - **Erro (404)**: `{"detail": "Not Found"}`
+
+- **PUT /users/{user_id}** — Atualiza um usuário existente.
+  - **Body**: `{"username": "string", "email": "string", "password": "string"}`
+  - **Sucesso (200)**: Retorna o usuário atualizado: `{"id": int, "username": "string", "email": "string"}`
+  - **Erro (404)**: Usuário não encontrado: `{"detail": "Not Found"}`
+  - **Erro (409)**: Username ou email já existem em outro usuário: `{"detail": "username ou email já existem!"}`
+
+- **DELETE /users/{user_id}** — Remove um usuário.
+  - **Sucesso (200)**: `{"message": "User delete"}`
+  - **Erro (404)**: `{"detail": "Not Found"}`
 
 ## Como Usar
 
@@ -126,9 +157,10 @@ A API estará disponível em: **http://127.0.0.1:8000**
 fast_api/
 ├── fast_api/
 │   ├── __init__.py
-│   ├── app.py          # Aplicação principal e rotas
+│   ├── app.py          # Aplicação principal e rotas da API
 │   ├── models.py       # Modelos ORM (User) com SQLAlchemy
 │   ├── schemas.py      # Modelos Pydantic (Message, UserSchema, UserPublic, UserList, ErrorDetail)
+│   ├── database.py     # Configuração da sessão do banco de dados
 │   └── settings.py     # Configurações (DATABASE_URL) via pydantic-settings
 ├── migrations/         # Migrações Alembic
 │   ├── env.py
@@ -167,6 +199,13 @@ fast_api/
 - Mantenha linhas com no máximo **79 caracteres**
 - Adicione **docstrings** (PEP-257) em módulos, classes e funções
 - Use **type hints** (PEP-484) em todas as funções
+- Padronize variáveis do banco de dados como `user_db` ou `db_user`
+
+### Convenções de Nomenclatura
+
+- **Schemas de entrada**: `user: UserSchema` (dados recebidos da requisição)
+- **Objetos do banco**: `user_db` (objetos User carregados do banco)
+- **Variáveis temporárias**: `existing_user` (para verificações de duplicatas)
 
 ## Licença
 
