@@ -8,6 +8,7 @@ from http import HTTPStatus
 
 from fastapi import Depends, FastAPI, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fast_api.database import get_session
@@ -43,35 +44,32 @@ def read_root() -> Message:
     response_model=UserPublic,
     responses={409: {'model': ErrorDetail}},
 )
-def create_user(user: UserSchema, session=Depends(get_session)) -> UserPublic:
+def create_user(
+    user: UserSchema, session: Session = Depends(get_session)
+) -> UserPublic:
     """Cria um novo usuário."""
-
-    db_user: User | None = session.scalar(
+    existing_user: User | None = session.scalar(
         select(User).where(
             (User.username == user.username) | (User.email == user.email)
         )
     )
 
-    # Retorna Error
-    if db_user:
-        if db_user.username == user.username:
+    if existing_user:
+        if existing_user.username == user.username:
             raise HTTPException(
                 status_code=HTTPStatus.CONFLICT, detail='username já existe!'
             )
-        elif db_user.email == user.email:
+        elif existing_user.email == user.email:
             raise HTTPException(
                 status_code=HTTPStatus.CONFLICT, detail='email já existe!'
             )
 
-    new_user = User(**user.model_dump())
-    # Registra o obj na sessão
-    session.add(new_user)
-    # Envia de fato para o database
+    user_db = User(**user.model_dump())
+    session.add(user_db)
     session.commit()
-    # Atualiza o obj em relação ao database
-    session.refresh(new_user)
+    session.refresh(user_db)
 
-    return new_user
+    return user_db
 
 
 @app.get(
@@ -97,15 +95,14 @@ def read_user_id(
     user_id: int, session: Session = Depends(get_session)
 ) -> UserPublic:
     """Retorna um usuário pelo id."""
-    user = session.scalar(select(User).where(User.id == user_id))
+    user_db = session.scalar(select(User).where(User.id == user_id))
 
-    if not user:
+    if not user_db:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
         )
 
-    user = session.scalar(select(User).where(User.id == user_id))
-    return user
+    return user_db
 
 
 @app.put(
@@ -123,26 +120,32 @@ def update_user(
     if not user_db:
         raise HTTPException(status_code=HTTPStatus.NOT_FOUND)
 
-    user_db.email = user.email
-    user_db.username = user.username
-    user_db.password = user.password
+    try:
+        user_db.email = user.email
+        user_db.username = user.username
+        user_db.password = user.password
 
-    session.add(user_db)
-    session.commit()
-    session.refresh(user_db)
+        session.add(user_db)
+        session.commit()
+        session.refresh(user_db)
 
-    return user_db
+        return user_db
+    except IntegrityError:
+        raise HTTPException(
+            status_code=HTTPStatus.CONFLICT,
+            detail='username ou email já existem!',
+        )
 
 
 @app.delete(
     '/users/{user_id}',
     status_code=HTTPStatus.OK,
-    response_model=UserPublic,
+    response_model=Message,
     responses={404: {'model': ErrorDetail}},
 )
 def delete_user(
     user_id: int, session: Session = Depends(get_session)
-) -> UserPublic:
+) -> Message:
     """Remove um usuário pelo id e retorna o usuário removido."""
     user_db = session.scalar(select(User).where(User.id == user_id))
 
@@ -152,4 +155,4 @@ def delete_user(
     session.delete(user_db)
     session.commit()
 
-    return user_db
+    return Message(message='User delete')

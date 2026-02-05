@@ -8,7 +8,7 @@ from sqlalchemy import select
 from fast_api.models import User
 
 
-def test_create_user(session, mock_db_time) -> None:
+def test_create_user_db(session, mock_db_time) -> None:
     """Testa se o usuário é criado com sucesso."""
     # mocka o tempo do banco de dados
     with mock_db_time(model=User, time=datetime(2026, 1, 1)) as time:

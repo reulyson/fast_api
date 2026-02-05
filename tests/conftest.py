@@ -91,6 +91,7 @@ def mock_db_time():
 
 @pytest.fixture
 def mock_user(session):
+    """Cria um usuário de teste no banco de dados."""
     user = User(
         username='teste', email='teste@teste.com', password='testeteste'
     )

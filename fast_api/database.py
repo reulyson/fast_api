@@ -1,3 +1,5 @@
+"""Configuração da conexão e sessão do banco de dados."""
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
@@ -8,6 +10,11 @@ engine = create_engine(Settings().DATABASE_URL)
 
 
 def get_session():
-    # Inicia a sessão do banco
+    """Retorna uma sessão do banco de dados.
+
+    Yields:
+        Session: Sessão do SQLAlchemy para operações no banco de dados.
+
+    """
     with Session(engine) as session:
         yield session
