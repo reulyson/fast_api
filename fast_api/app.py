@@ -7,6 +7,7 @@ e as rotas da API.
 from http import HTTPStatus
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
@@ -16,9 +17,15 @@ from fast_api.models import User
 from fast_api.schemas import (
     ErrorDetail,
     Message,
+    Token,
     UserList,
     UserPublic,
     UserSchema,
+)
+from fast_api.security import (
+    create_access_token,
+    get_password_hash,
+    verify_password,
 )
 
 app = FastAPI(
@@ -64,7 +71,11 @@ def create_user(
                 status_code=HTTPStatus.CONFLICT, detail='email já existe!'
             )
 
-    user_db = User(**user.model_dump())
+    user_db = User(
+        username=user.username,
+        email=user.email,
+        password=get_password_hash(user.password),
+    )
     session.add(user_db)
     session.commit()
     session.refresh(user_db)
@@ -123,7 +134,7 @@ def update_user(
     try:
         user_db.email = user.email
         user_db.username = user.username
-        user_db.password = user.password
+        user_db.password = get_password_hash(user.password)
 
         session.add(user_db)
         session.commit()
@@ -156,3 +167,29 @@ def delete_user(
     session.commit()
 
     return Message(message='User delete')
+
+
+@app.post('/token/', response_model=Token)
+def login_for_access_token(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    session: Session = Depends(get_session),
+):
+    user_db = session.scalar(
+        select(User).where(User.email == form_data.username)
+    )
+
+    if not user_db:
+        raise HTTPException(
+            status_code=HTTPStatus.UNAUTHORIZED,
+            detail='Email ou senha incorretos',
+        )
+
+    # Varifica se a senha passada está cadastrada
+    if not verify_password(form_data.password, user_db.password):
+        raise HTTPException(
+            status_code=HTTPStatus.UNAUTHORIZED, detail='Senha incorreta'
+        )
+
+    access_token = create_access_token({'sub': user_db.email})
+
+    return Token(access_token=access_token, token_type='Bearer')
