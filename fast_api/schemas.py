@@ -43,3 +43,8 @@ class UserList(BaseModel):
     """Schema para lista de usuários."""
 
     users: list[UserPublic]
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
