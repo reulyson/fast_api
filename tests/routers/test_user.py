@@ -3,7 +3,7 @@ from http import HTTPStatus
 from fast_api.schemas import UserPublic
 
 
-def test_create_user(client, token) -> None:
+def test_create_user(client) -> None:
     """Testa se a rota de criação de usuário retorna o usuário criado."""
     response = client.post(
         '/users/',
@@ -12,18 +12,17 @@ def test_create_user(client, token) -> None:
             'email': 'novo@teste.com',
             'password': '123456',
         },
-        headers={'Authorization': f'Bearer {token}'},
     )
 
     assert response.status_code == HTTPStatus.CREATED
     assert response.json() == {
-        'id': 2,
+        'id': 1,
         'username': 'novo_usuario',
         'email': 'novo@teste.com',
     }
 
 
-def test_create_user_same_username(client, mock_user, token) -> None:
+def test_create_user_same_username(client, mock_user) -> None:
     """Testa se a rota de criação retorna erro quando username duplicado."""
     response = client.post(
         '/users/',
@@ -32,14 +31,13 @@ def test_create_user_same_username(client, mock_user, token) -> None:
             'email': 'teste@teste.com',
             'password': '123456',
         },
-        headers={'Authorization': f'Bearer {token}'},
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
     assert response.json() == {'detail': 'username já existe!'}
 
 
-def test_create_user_same_email(client, mock_user, token) -> None:
+def test_create_user_same_email(client, mock_user) -> None:
     """Testa se a rota de criação retorna erro quando email duplicado."""
     response = client.post(
         '/users/',
@@ -48,7 +46,6 @@ def test_create_user_same_email(client, mock_user, token) -> None:
             'email': 'teste@teste.com',
             'password': '123456',
         },
-        headers={'Authorization': f'Bearer {token}'},
     )
 
     assert response.status_code == HTTPStatus.CONFLICT
