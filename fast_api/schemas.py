@@ -1,6 +1,6 @@
 """Schemas Pydantic para validação e serialização da API."""
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 
 class Message(BaseModel):
@@ -48,3 +48,8 @@ class UserList(BaseModel):
 class Token(BaseModel):
     access_token: str
     token_type: str
+
+
+class FilterParams(BaseModel):
+    limit: int = Field(default=10, ge=1)
+    offset: int = Field(default=0, ge=0)

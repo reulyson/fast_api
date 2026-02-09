@@ -113,7 +113,7 @@ def mock_user(session):
 @pytest.fixture
 def token(client, mock_user):
     response = client.post(
-        '/token/',
+        '/auth/',
         data={
             'username': mock_user.email,
             'password': mock_user.origin_password,

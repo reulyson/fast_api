@@ -1,14 +1,22 @@
 from http import HTTPStatus
 from typing import Annotated
-from fastapi import Depends, HTTPException, APIRouter, Query
-from sqlalchemy.exc import IntegrityError
-from fast_api.security import get_current_user, get_password_hash
+
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from fast_api.database import get_session
 from fast_api.models import User
-from fast_api.schemas import ErrorDetail, FilterParams, Message, UserList, UserPublic, UserSchema
+from fast_api.schemas import (
+    ErrorDetail,
+    FilterParams,
+    Message,
+    UserList,
+    UserPublic,
+    UserSchema,
+)
+from fast_api.security import get_current_user, get_password_hash
 
 router = APIRouter(prefix='/users', tags=['users'])
 
@@ -19,9 +27,8 @@ FilterParams = Annotated[FilterParams, Query()]
 
 
 @router.post(
-    '/users/',
+    '/',
     status_code=HTTPStatus.CREATED,
-    response_model=UserPublic,
     responses={409: {'model': ErrorDetail}},
 )
 def create_user(
@@ -58,25 +65,22 @@ def create_user(
     return user_db
 
 
-@router.get(
-    '/users/',
-    status_code=HTTPStatus.OK,
-    response_model=UserList,
-)
+@router.get('/', status_code=HTTPStatus.OK)
 def read_users(
     filter_params: FilterParams,
     session: Session,
     current_user: CurrentUser,
 ) -> UserList:
     """Retorna todos os usuários."""
-    users = session.scalars(select(User).limit(filter_params.limit).offset(filter_params.offset))
+    users = session.scalars(
+        select(User).limit(filter_params.limit).offset(filter_params.offset)
+    )
     return {'users': users}
 
 
 @router.get(
-    '/users/{user_id}',
+    '/{user_id}',
     status_code=HTTPStatus.OK,
-    response_model=UserPublic,
     responses={404: {'model': ErrorDetail}},
 )
 def read_user_id(
@@ -96,9 +100,8 @@ def read_user_id(
 
 
 @router.put(
-    '/users/{user_id}',
+    '/{user_id}',
     status_code=HTTPStatus.OK,
-    response_model=UserPublic,
     responses={404: {'model': ErrorDetail}},
 )
 def update_user(
@@ -136,9 +139,8 @@ def update_user(
 
 
 @router.delete(
-    '/users/{user_id}',
+    '/{user_id}',
     status_code=HTTPStatus.OK,
-    response_model=Message,
     responses={404: {'model': ErrorDetail}},
 )
 def delete_user(

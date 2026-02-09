@@ -13,16 +13,13 @@ from sqlalchemy.orm import Session
 
 from fast_api.database import get_session
 from fast_api.models import User
+from fast_api.settings import Settings
 
 # Pega um hash recomendado pela pwd
 pwd_context = PasswordHash.recommended()
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth')
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
-
-# Provisório
-SECRET_KEY = 'chave_secreta'
-ALGORITHM = 'HS256'
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+settings = Settings()
 
 
 def get_password_hash(password: str) -> str:
@@ -42,14 +39,18 @@ def create_access_token(data: dict):
 
     # Calcula o tempo de expiração
     expire = datetime.now(tz=ZoneInfo('UTC')) + timedelta(
-        minutes=ACCESS_TOKEN_EXPIRE_MINUTES
+        minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
     )
 
     # Adiciona o campo 'exp' no payload
     to_encode.update({'exp': expire})
 
     # Monta o token
-    encode_jwt = encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    encode_jwt = encode(
+        to_encode,
+        settings.SECRET_KEY,
+        algorithm=settings.ALGORITHM,
+    )
 
     return encode_jwt
 
@@ -68,7 +69,11 @@ def get_current_user(
     )
     try:
         # Decodifica o token
-        payload = decode(token, SECRET_KEY, algorithms=ALGORITHM)
+        payload = decode(
+            token,
+            settings.SECRET_KEY,
+            algorithms=settings.ALGORITHM,
+        )
         # Obtém o subject do token
         subject = payload.get('sub')
         # Se o subject não for encontrado, lança a exceção
