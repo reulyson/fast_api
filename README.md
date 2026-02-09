@@ -9,6 +9,7 @@ Este projeto é uma API moderna e de alta performance construída com **FastAPI*
 ### Funcionalidades
 
 - ✅ CRUD completo de usuários (Create, Read, Update, Delete)
+- ✅ Autenticação JWT (OAuth2) para rotas protegidas
 - ✅ Validação de dados com Pydantic
 - ✅ Validação de unicidade (username e email únicos)
 - ✅ Paginação na listagem de usuários
@@ -22,6 +23,8 @@ Este projeto é uma API moderna e de alta performance construída com **FastAPI*
 - **FastAPI** — Framework web assíncrono
 - **SQLAlchemy** — ORM para banco de dados
 - **Pydantic** — Validação e serialização
+- **PyJWT** — Tokens JWT para autenticação
+- **pwdlib** — Hash e verificação de senhas
 - **Alembic** — Migrações de banco
 - **pydantic-settings** — Configurações via variáveis de ambiente
 
@@ -63,10 +66,12 @@ poetry install
 
 ### 5. Configurar variáveis de ambiente
 
-Crie um arquivo `.env` na raiz do projeto com a URL do banco de dados:
+Crie um arquivo `.env` na raiz do projeto:
 
 ```bash
 DATABASE_URL=sqlite:///./database.db
+# Em produção, defina uma chave secreta com pelo menos 32 caracteres:
+# SECRET_KEY=sua_chave_secreta_longa_e_aleatoria
 ```
 
 ### 6. Executar migrações (opcional)
@@ -79,41 +84,69 @@ alembic upgrade head
 
 ## Rotas da API
 
-| Método   | Rota           | Descrição                    | Status Codes        |
-|----------|----------------|------------------------------|---------------------|
-| GET      | `/`            | Mensagem de boas-vindas      | 200                 |
-| POST     | `/users/`      | Cria um usuário               | 201, 409            |
-| GET      | `/users/`      | Lista todos os usuários       | 200                 |
-| GET      | `/users/{id}`  | Retorna um usuário pelo id    | 200, 404            |
-| PUT      | `/users/{id}`  | Atualiza um usuário pelo id   | 200, 404, 409       |
-| DELETE   | `/users/{id}`  | Remove um usuário pelo id     | 200, 404            |
+| Método   | Rota           | Descrição                    | Autenticação | Status Codes        |
+|----------|----------------|------------------------------|--------------|---------------------|
+| GET      | `/`            | Mensagem de boas-vindas      | Não          | 200                 |
+| POST     | `/token/`      | Obtém token de acesso        | Não          | 200, 401            |
+| POST     | `/users/`      | Cria um usuário              | Sim          | 201, 409            |
+| GET      | `/users/`      | Lista todos os usuários      | Sim          | 200, 401            |
+| GET      | `/users/{id}`  | Retorna um usuário pelo id   | Sim          | 200, 401, 404       |
+| PUT      | `/users/{id}`  | Atualiza um usuário pelo id  | Sim          | 200, 401, 403, 409  |
+| DELETE   | `/users/{id}`  | Remove um usuário pelo id    | Sim          | 200, 401, 403       |
+
+### Autenticação
+
+As rotas protegidas exigem o header `Authorization: Bearer <token>`. Para obter o token:
+
+```bash
+curl -X POST "http://127.0.0.1:8000/token/" \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "username=email@exemplo.com&password=suasenha"
+```
+
+Resposta: `{"access_token": "...", "token_type": "Bearer"}`
 
 ### Detalhamento das Rotas
 
-- **GET /** — Retorna `{"message": "Hello, World!"}`.
+- **GET /** — Retorna `{"message": "Hello, World!"}`. Pública.
 
-- **POST /users/** — Cria um novo usuário.
+- **POST /token/** — Obtém token JWT para autenticação.
+  - **Body** (form-urlencoded): `username` (email), `password`
+  - **Sucesso (200)**: `{"access_token": "string", "token_type": "Bearer"}`
+  - **Erro (401)**: `{"detail": "Email ou senha incorretos"}` ou `{"detail": "Senha incorreta"}`
+
+- **POST /users/** — Cria um novo usuário. Requer autenticação.
+  - **Headers**: `Authorization: Bearer <token>`
   - **Body**: `{"username": "string", "email": "string", "password": "string"}`
-  - **Sucesso (201)**: Retorna o usuário criado (sem senha): `{"id": int, "username": "string", "email": "string"}`
-  - **Erro (409)**: Quando username ou email já existem: `{"detail": "username já existe!"}` ou `{"detail": "email já existe!"}`
+  - **Sucesso (201)**: Retorna o usuário criado: `{"id": int, "username": "string", "email": "string"}`
+  - **Erro (401)**: Token inválido ou ausente: `{"detail": "Could not validate credentials"}`
+  - **Erro (409)**: Username ou email já existem: `{"detail": "username já existe!"}` ou `{"detail": "email já existe!"}`
 
-- **GET /users/** — Lista todos os usuários com paginação.
+- **GET /users/** — Lista todos os usuários com paginação. Requer autenticação.
+  - **Headers**: `Authorization: Bearer <token>`
   - **Query params**: `limit` (padrão: 10), `offset` (padrão: 0)
   - **Resposta**: `{"users": [{"id": int, "username": "string", "email": "string"}, ...]}`
+  - **Erro (401)**: Token inválido ou ausente
 
-- **GET /users/{user_id}** — Retorna um usuário específico.
+- **GET /users/{user_id}** — Retorna um usuário específico. Requer autenticação.
+  - **Headers**: `Authorization: Bearer <token>`
   - **Sucesso (200)**: `{"id": int, "username": "string", "email": "string"}`
+  - **Erro (401)**: Token inválido ou ausente
   - **Erro (404)**: `{"detail": "Not Found"}`
 
-- **PUT /users/{user_id}** — Atualiza um usuário existente.
+- **PUT /users/{user_id}** — Atualiza um usuário existente. Requer autenticação. Só o próprio usuário pode atualizar seus dados.
+  - **Headers**: `Authorization: Bearer <token>`
   - **Body**: `{"username": "string", "email": "string", "password": "string"}`
   - **Sucesso (200)**: Retorna o usuário atualizado: `{"id": int, "username": "string", "email": "string"}`
-  - **Erro (404)**: Usuário não encontrado: `{"detail": "Not Found"}`
+  - **Erro (401)**: Token inválido ou ausente
+  - **Erro (403)**: Tentativa de atualizar outro usuário: `{"detail": "Você não tem permissão para atualizar este usuário"}`
   - **Erro (409)**: Username ou email já existem em outro usuário: `{"detail": "username ou email já existem!"}`
 
-- **DELETE /users/{user_id}** — Remove um usuário.
+- **DELETE /users/{user_id}** — Remove um usuário. Requer autenticação. Só o próprio usuário pode se remover.
+  - **Headers**: `Authorization: Bearer <token>`
   - **Sucesso (200)**: `{"message": "User delete"}`
-  - **Erro (404)**: `{"detail": "Not Found"}`
+  - **Erro (401)**: Token inválido ou ausente
+  - **Erro (403)**: Tentativa de remover outro usuário: `{"detail": "Você não tem permissão para remover este usuário"}`
 
 ## Como Usar
 
@@ -159,17 +192,19 @@ fast_api/
 │   ├── __init__.py
 │   ├── app.py          # Aplicação principal e rotas da API
 │   ├── models.py       # Modelos ORM (User) com SQLAlchemy
-│   ├── schemas.py      # Modelos Pydantic (Message, UserSchema, UserPublic, UserList, ErrorDetail)
+│   ├── schemas.py      # Modelos Pydantic (Message, UserSchema, UserPublic, UserList, Token, ErrorDetail)
 │   ├── database.py     # Configuração da sessão do banco de dados
+│   ├── security.py     # Autenticação JWT, hash de senhas, get_current_user
 │   └── settings.py     # Configurações (DATABASE_URL) via pydantic-settings
 ├── migrations/         # Migrações Alembic
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
 ├── tests/
-│   ├── conftest.py     # Fixtures (cliente, sessão, mock_db_time)
+│   ├── conftest.py     # Fixtures (client, session, mock_user, token)
 │   ├── test_app.py     # Testes da API
-│   └── test_db.py      # Testes do banco de dados
+│   ├── test_db.py      # Testes do banco de dados
+│   └── test_security.py # Testes de autenticação JWT
 ├── alembic.ini        # Configuração do Alembic
 ├── pyproject.toml     # Configurações do projeto
 ├── poetry.lock        # Lock das dependências
