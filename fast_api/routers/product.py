@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast_api.database import get_session
-from fast_api.models import Product
+from fast_api.models import Product, User
 from fast_api.schemas.product_schema import (
     ProductList,
     ProductPublic,
@@ -19,7 +19,7 @@ router = APIRouter(prefix='/products', tags=['products'])
 
 # Dependencies Annotated
 AsyncSession = Annotated[AsyncSession, Depends(get_session)]
-CurrentUser = Annotated[Product, Depends(get_current_user)]
+CurrentUser = Annotated[User, Depends(get_current_user)]
 FilterParams = Annotated[FilterParams, Query()]
 
 
