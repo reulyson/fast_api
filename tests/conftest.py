@@ -112,7 +112,7 @@ async def mock_user(session: AsyncSession):
 
 
 @pytest_asyncio.fixture
-async def mock_product(session: AsyncSession):
+async def mock_product(session: AsyncSession) -> Product:
     """Cria um produto de teste no banco de dados."""
     product = Product(
         name='produto_teste',
