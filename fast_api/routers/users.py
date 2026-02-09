@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast_api.database import get_session
 from fast_api.models import User
@@ -21,7 +21,7 @@ from fast_api.security import get_current_user, get_password_hash
 router = APIRouter(prefix='/users', tags=['users'])
 
 # Dependencies Annotated
-Session = Annotated[Session, Depends(get_session)]
+AsyncSession = Annotated[AsyncSession, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(get_current_user)]
 FilterParams = Annotated[FilterParams, Query()]
 
@@ -31,13 +31,13 @@ FilterParams = Annotated[FilterParams, Query()]
     status_code=HTTPStatus.CREATED,
     responses={409: {'model': ErrorDetail}},
 )
-def create_user(
+async def create_user(
     user: UserSchema,
-    session: Session,
+    session: AsyncSession,
     current_user: CurrentUser,
 ) -> UserPublic:
     """Cria um novo usuário."""
-    existing_user: User | None = session.scalar(
+    existing_user: User | None = await session.scalar(
         select(User).where(
             (User.username == user.username) | (User.email == user.email)
         )
@@ -59,20 +59,20 @@ def create_user(
         password=get_password_hash(user.password),
     )
     session.add(user_db)
-    session.commit()
-    session.refresh(user_db)
+    await session.commit()
+    await session.refresh(user_db)
 
     return user_db
 
 
 @router.get('/', status_code=HTTPStatus.OK)
-def read_users(
+async def read_users(
     filter_params: FilterParams,
-    session: Session,
+    session: AsyncSession,
     current_user: CurrentUser,
 ) -> UserList:
     """Retorna todos os usuários."""
-    users = session.scalars(
+    users = await session.scalars(
         select(User).limit(filter_params.limit).offset(filter_params.offset)
     )
     return {'users': users}
@@ -83,13 +83,13 @@ def read_users(
     status_code=HTTPStatus.OK,
     responses={404: {'model': ErrorDetail}},
 )
-def read_user_id(
+async def read_user_id(
     user_id: int,
-    session: Session,
+    session: AsyncSession,
     current_user: CurrentUser,
 ) -> UserPublic:
     """Retorna um usuário pelo id."""
-    user_db = session.scalar(select(User).where(User.id == user_id))
+    user_db = await session.scalar(select(User).where(User.id == user_id))
 
     if not user_db:
         raise HTTPException(
@@ -104,10 +104,10 @@ def read_user_id(
     status_code=HTTPStatus.OK,
     responses={404: {'model': ErrorDetail}},
 )
-def update_user(
+async def update_user(
     user_id: int,
     user: UserSchema,
-    session: Session,
+    session: AsyncSession,
     current_user: CurrentUser,
 ) -> UserPublic:
     """Atualiza um usuário existente pelo id."""
@@ -125,9 +125,9 @@ def update_user(
         # Adiciona o usuário atualizado ao banco de dados
         session.add(current_user)
         # Commita a transação
-        session.commit()
+        await session.commit()
         # Refresca o usuário atualizado
-        session.refresh(current_user)
+        await session.refresh(current_user)
 
         return current_user
     # Se o usuário já existir, lança uma exceção
@@ -143,9 +143,9 @@ def update_user(
     status_code=HTTPStatus.OK,
     responses={404: {'model': ErrorDetail}},
 )
-def delete_user(
+async def delete_user(
     user_id: int,
-    session: Session,
+    session: AsyncSession,
     current_user: CurrentUser,
 ) -> Message:
     """Remove um usuário pelo id e retorna o usuário removido."""
@@ -157,7 +157,7 @@ def delete_user(
             detail='Você não tem permissão para remover este usuário',
         )
     # Remove o usuário
-    session.delete(current_user)
-    session.commit()
+    await session.delete(current_user)
+    await session.commit()
 
     return Message(message='User delete')

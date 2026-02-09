@@ -9,7 +9,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jwt import DecodeError, decode, encode
 from pwdlib import PasswordHash
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast_api.database import get_session
 from fast_api.models import User
@@ -55,8 +55,8 @@ def create_access_token(data: dict):
     return encode_jwt
 
 
-def get_current_user(
-    session: Session = Depends(get_session),
+async def get_current_user(
+    session: AsyncSession = Depends(get_session),
     token: str = Depends(oauth2_scheme),
 ):
     """Obtém o usuário atual a partir do token."""
@@ -84,7 +84,7 @@ def get_current_user(
         raise credentials_exception
 
     # Obtém o usuário do banco de dados
-    user = session.scalar(select(User).where(User.email == subject))
+    user = await session.scalar(select(User).where(User.email == subject))
     # Se o usuário não for encontrado, lança a exceção
     if not user:
         raise credentials_exception
