@@ -70,8 +70,9 @@ Crie um arquivo `.env` na raiz do projeto:
 
 ```bash
 DATABASE_URL=sqlite:///./database.db
-# Em produção, defina uma chave secreta com pelo menos 32 caracteres:
-# SECRET_KEY=sua_chave_secreta_longa_e_aleatoria
+SECRET_KEY=sua_chave_secreta_com_pelo_menos_32_caracteres
+ALGORITHM=HS256
+ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```
 
 ### 6. Executar migrações (opcional)
@@ -87,7 +88,7 @@ alembic upgrade head
 | Método   | Rota           | Descrição                    | Autenticação | Status Codes        |
 |----------|----------------|------------------------------|--------------|---------------------|
 | GET      | `/`            | Mensagem de boas-vindas      | Não          | 200                 |
-| POST     | `/token/`      | Obtém token de acesso        | Não          | 200, 401            |
+| POST     | `/auth/`       | Obtém token de acesso        | Não          | 200, 401            |
 | POST     | `/users/`      | Cria um usuário              | Sim          | 201, 409            |
 | GET      | `/users/`      | Lista todos os usuários      | Sim          | 200, 401            |
 | GET      | `/users/{id}`  | Retorna um usuário pelo id   | Sim          | 200, 401, 404       |
@@ -99,7 +100,7 @@ alembic upgrade head
 As rotas protegidas exigem o header `Authorization: Bearer <token>`. Para obter o token:
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/token/" \
+curl -X POST "http://127.0.0.1:8000/auth/" \
   -H "Content-Type: application/x-www-form-urlencoded" \
   -d "username=email@exemplo.com&password=suasenha"
 ```
@@ -110,7 +111,7 @@ Resposta: `{"access_token": "...", "token_type": "Bearer"}`
 
 - **GET /** — Retorna `{"message": "Hello, World!"}`. Pública.
 
-- **POST /token/** — Obtém token JWT para autenticação.
+- **POST /auth/** — Obtém token JWT para autenticação.
   - **Body** (form-urlencoded): `username` (email), `password`
   - **Sucesso (200)**: `{"access_token": "string", "token_type": "Bearer"}`
   - **Erro (401)**: `{"detail": "Email ou senha incorretos"}` ou `{"detail": "Senha incorreta"}`
@@ -192,19 +193,25 @@ fast_api/
 │   ├── __init__.py
 │   ├── app.py          # Aplicação principal e rotas da API
 │   ├── models.py       # Modelos ORM (User) com SQLAlchemy
-│   ├── schemas.py      # Modelos Pydantic (Message, UserSchema, UserPublic, UserList, Token, ErrorDetail)
+│   ├── schemas.py      # Modelos Pydantic (Message, UserSchema, UserPublic, UserList, Token, ErrorDetail, FilterParams)
 │   ├── database.py     # Configuração da sessão do banco de dados
 │   ├── security.py     # Autenticação JWT, hash de senhas, get_current_user
-│   └── settings.py     # Configurações (DATABASE_URL) via pydantic-settings
+│   ├── settings.py     # Configurações (DATABASE_URL, SECRET_KEY, ALGORITHM) via pydantic-settings
+│   └── routers/
+│       ├── auth.py     # Rota de autenticação (POST /auth/)
+│       └── users.py    # Rotas CRUD de usuários
 ├── migrations/         # Migrações Alembic
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
 ├── tests/
 │   ├── conftest.py     # Fixtures (client, session, mock_user, token)
-│   ├── test_app.py     # Testes da API
+│   ├── test_app.py     # Testes da API principal
 │   ├── test_db.py      # Testes do banco de dados
-│   └── test_security.py # Testes de autenticação JWT
+│   ├── test_security.py # Testes de autenticação JWT
+│   └── routers/
+│       ├── test_auth.py  # Testes da rota de autenticação
+│       └── test_user.py  # Testes das rotas de usuários
 ├── alembic.ini        # Configuração do Alembic
 ├── pyproject.toml     # Configurações do projeto
 ├── poetry.lock        # Lock das dependências
