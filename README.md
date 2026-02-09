@@ -4,15 +4,16 @@ API REST desenvolvida com FastAPI.
 
 ## Descrição
 
-Este projeto é uma API moderna e de alta performance construída com **FastAPI**, seguindo as melhores práticas de desenvolvimento Python (PEP-8, PEP-257, PEP-484). Oferece um CRUD completo de usuários com persistência em banco de dados SQLite e documentação OpenAPI automática. Inclui camada de persistência com **SQLAlchemy** e **Alembic** para migrações de banco de dados.
+Este projeto é uma API moderna e de alta performance construída com **FastAPI**, seguindo as melhores práticas de desenvolvimento Python (PEP-8, PEP-257, PEP-484). Oferece CRUD completo de **usuários** e **produtos** com persistência em banco de dados SQLite e documentação OpenAPI automática. Inclui camada de persistência com **SQLAlchemy** e **Alembic** para migrações de banco de dados.
 
 ### Funcionalidades
 
 - ✅ CRUD completo de usuários (Create, Read, Update, Delete)
+- ✅ CRUD completo de produtos (Create, Read, Update, Delete)
 - ✅ Autenticação JWT (OAuth2) para rotas protegidas
 - ✅ Validação de dados com Pydantic
-- ✅ Validação de unicidade (username e email únicos)
-- ✅ Paginação na listagem de usuários
+- ✅ Validação de unicidade (username, email e nome de produto únicos)
+- ✅ Paginação na listagem de usuários e produtos
 - ✅ Tratamento de erros com códigos HTTP apropriados
 - ✅ Documentação interativa (Swagger UI e ReDoc)
 - ✅ Testes automatizados com pytest
@@ -85,15 +86,20 @@ alembic upgrade head
 
 ## Rotas da API
 
-| Método   | Rota           | Descrição                    | Autenticação | Status Codes        |
-|----------|----------------|------------------------------|--------------|---------------------|
-| GET      | `/`            | Mensagem de boas-vindas      | Não          | 200                 |
-| POST     | `/auth/`       | Obtém token de acesso        | Não          | 200, 401            |
-| POST     | `/users/`      | Cria um usuário              | Sim          | 201, 409            |
-| GET      | `/users/`      | Lista todos os usuários      | Sim          | 200, 401            |
-| GET      | `/users/{id}`  | Retorna um usuário pelo id   | Sim          | 200, 401, 404       |
-| PUT      | `/users/{id}`  | Atualiza um usuário pelo id  | Sim          | 200, 401, 403, 409  |
-| DELETE   | `/users/{id}`  | Remove um usuário pelo id    | Sim          | 200, 401, 403       |
+| Método   | Rota              | Descrição                     | Autenticação | Status Codes        |
+|----------|-------------------|-------------------------------|--------------|---------------------|
+| GET      | `/`               | Mensagem de boas-vindas       | Não          | 200                 |
+| POST     | `/auth/`          | Obtém token de acesso         | Não          | 200, 401            |
+| POST     | `/users/`         | Cria um usuário               | Sim          | 201, 409            |
+| GET      | `/users/`         | Lista todos os usuários       | Sim          | 200, 401            |
+| GET      | `/users/{id}`     | Retorna um usuário pelo id    | Sim          | 200, 401, 404       |
+| PUT      | `/users/{id}`     | Atualiza um usuário pelo id   | Sim          | 200, 401, 403, 409  |
+| DELETE   | `/users/{id}`     | Remove um usuário pelo id     | Sim          | 200, 401, 403       |
+| POST     | `/products/`      | Cria um produto               | Sim          | 201, 409            |
+| GET      | `/products/`      | Lista todos os produtos       | Sim          | 200, 401            |
+| GET      | `/products/{id}`  | Retorna um produto pelo id    | Sim          | 200, 401, 404       |
+| PUT      | `/products/{id}`  | Atualiza um produto pelo id   | Sim          | 200, 401, 404, 409  |
+| DELETE   | `/products/{id}`  | Remove um produto pelo id     | Sim          | 200, 401, 404       |
 
 ### Autenticação
 
@@ -149,6 +155,41 @@ Resposta: `{"access_token": "...", "token_type": "Bearer"}`
   - **Erro (401)**: Token inválido ou ausente
   - **Erro (403)**: Tentativa de remover outro usuário: `{"detail": "Você não tem permissão para remover este usuário"}`
 
+### Rotas de Produtos
+
+- **POST /products/** — Cria um novo produto. Requer autenticação.
+  - **Headers**: `Authorization: Bearer <token>`
+  - **Body**: `{"name": "string", "description": "string", "price": float}`
+  - **Sucesso (201)**: Retorna o produto criado: `{"id": int, "name": "string", "description": "string", "price": float}`
+  - **Erro (401)**: Token inválido ou ausente
+  - **Erro (409)**: Nome já existe: `{"detail": "Produto já existe!"}`
+
+- **GET /products/** — Lista todos os produtos com paginação. Requer autenticação.
+  - **Headers**: `Authorization: Bearer <token>`
+  - **Query params**: `limit` (padrão: 10), `offset` (padrão: 0)
+  - **Resposta**: `{"products": [{"id": int, "name": "string", "description": "string", "price": float}, ...]}`
+  - **Erro (401)**: Token inválido ou ausente
+
+- **GET /products/{product_id}** — Retorna um produto pelo id. Requer autenticação.
+  - **Headers**: `Authorization: Bearer <token>`
+  - **Sucesso (200)**: `{"id": int, "name": "string", "description": "string", "price": float}`
+  - **Erro (401)**: Token inválido ou ausente
+  - **Erro (404)**: `{"detail": "Produto não encontrado!"}`
+
+- **PUT /products/{product_id}** — Atualiza um produto. Requer autenticação.
+  - **Headers**: `Authorization: Bearer <token>`
+  - **Body**: `{"name": "string", "description": "string", "price": float}`
+  - **Sucesso (200)**: Retorna o produto atualizado
+  - **Erro (401)**: Token inválido ou ausente
+  - **Erro (404)**: `{"detail": "Produto não encontrado!"}`
+  - **Erro (409)**: Nome já existe: `{"detail": "Nome de produto já existe!"}`
+
+- **DELETE /products/{product_id}** — Remove um produto. Requer autenticação.
+  - **Headers**: `Authorization: Bearer <token>`
+  - **Sucesso (200)**: `{"message": "Produto deletado!"}`
+  - **Erro (401)**: Token inválido ou ausente
+  - **Erro (404)**: `{"detail": "Produto não encontrado!"}`
+
 ## Como Usar
 
 ### Ativar o ambiente virtual
@@ -192,26 +233,31 @@ fast_api/
 ├── fast_api/
 │   ├── __init__.py
 │   ├── app.py          # Aplicação principal e rotas da API
-│   ├── models.py       # Modelos ORM (User) com SQLAlchemy
-│   ├── schemas.py      # Modelos Pydantic (Message, UserSchema, UserPublic, UserList, Token, ErrorDetail, FilterParams)
+│   ├── models.py       # Modelos ORM (User, Product) com SQLAlchemy
 │   ├── database.py     # Configuração da sessão do banco de dados
 │   ├── security.py     # Autenticação JWT, hash de senhas, get_current_user
-│   ├── settings.py     # Configurações (DATABASE_URL, SECRET_KEY, ALGORITHM) via pydantic-settings
+│   ├── settings.py     # Configurações (DATABASE_URL, SECRET_KEY) via pydantic-settings
+│   ├── schemas/        # Modelos Pydantic
+│   │   ├── schemas.py      # Message, ErrorDetail, Token, FilterParams
+│   │   ├── user_schema.py  # UserSchema, UserPublic, UserList
+│   │   └── product_schema.py # ProductSchema, ProductPublic, ProductList
 │   └── routers/
 │       ├── auth.py     # Rota de autenticação (POST /auth/)
-│       └── users.py    # Rotas CRUD de usuários
+│       ├── users.py    # Rotas CRUD de usuários
+│       └── product.py  # Rotas CRUD de produtos
 ├── migrations/         # Migrações Alembic
 │   ├── env.py
 │   ├── script.py.mako
 │   └── versions/
 ├── tests/
-│   ├── conftest.py     # Fixtures (client, session, mock_user, token)
+│   ├── conftest.py     # Fixtures (client, session, mock_user, mock_product, token)
 │   ├── test_app.py     # Testes da API principal
 │   ├── test_db.py      # Testes do banco de dados
 │   ├── test_security.py # Testes de autenticação JWT
 │   └── routers/
-│       ├── test_auth.py  # Testes da rota de autenticação
-│       └── test_user.py  # Testes das rotas de usuários
+│       ├── test_auth.py     # Testes da rota de autenticação
+│       ├── test_user.py     # Testes das rotas de usuários
+│       └── test_product.py  # Testes das rotas de produtos
 ├── alembic.ini        # Configuração do Alembic
 ├── pyproject.toml     # Configurações do projeto
 ├── poetry.lock        # Lock das dependências
@@ -245,9 +291,9 @@ fast_api/
 
 ### Convenções de Nomenclatura
 
-- **Schemas de entrada**: `user: UserSchema` (dados recebidos da requisição)
-- **Objetos do banco**: `user_db` (objetos User carregados do banco)
-- **Variáveis temporárias**: `existing_user` (para verificações de duplicatas)
+- **Schemas de entrada**: `user: UserSchema`, `product: ProductSchema` (dados da requisição)
+- **Objetos do banco**: `user_db`, `product_db` (objetos carregados do banco)
+- **Variáveis temporárias**: `existing_user`, `existing_product` (verificações de duplicatas)
 
 ## Licença
 
