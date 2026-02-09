@@ -36,3 +36,24 @@ class User:
         # Atualiza valor na MODIFICAÇÃO (UPDATE)
         onupdate=func.now(),
     )
+
+
+@table_registry.mapped_as_dataclass
+class Product:
+    """Modelo ORM para produtos."""
+
+    __tablename__ = 'products'
+
+    id: Mapped[int] = mapped_column(primary_key=True, init=False)
+    name: Mapped[str] = mapped_column(unique=True)
+    description: Mapped[str] = mapped_column(nullable=True)
+    price: Mapped[float] = mapped_column(nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        init=False,
+        server_default=func.now(),
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        init=False,
+        server_default=func.now(),
+        onupdate=func.now(),
+    )

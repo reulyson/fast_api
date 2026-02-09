@@ -8,7 +8,7 @@ from http import HTTPStatus
 
 from fastapi import FastAPI
 
-from fast_api.routers import auth, users
+from fast_api.routers import auth, product, users
 from fast_api.schemas import Message
 
 app = FastAPI(
@@ -19,6 +19,7 @@ app = FastAPI(
 
 app.include_router(auth.router)
 app.include_router(users.router)
+app.include_router(product.router)
 
 
 @app.get('/', status_code=HTTPStatus.OK)

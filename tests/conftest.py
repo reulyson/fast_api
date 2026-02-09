@@ -12,7 +12,7 @@ from sqlalchemy.pool import StaticPool
 
 from fast_api.app import app
 from fast_api.database import get_session
-from fast_api.models import User, table_registry
+from fast_api.models import Product, User, table_registry
 from fast_api.security import get_password_hash
 
 
@@ -109,6 +109,20 @@ async def mock_user(session: AsyncSession):
     user.origin_password = password
 
     return user
+
+
+@pytest_asyncio.fixture
+async def mock_product(session: AsyncSession):
+    """Cria um produto de teste no banco de dados."""
+    product = Product(
+        name='produto_teste',
+        description='descrição_teste',
+        price=100.00,
+    )
+    session.add(product)
+    await session.commit()
+    await session.refresh(product)
+    return product
 
 
 @pytest.fixture

@@ -8,10 +8,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast_api.database import get_session
 from fast_api.models import User
-from fast_api.schemas import (
+from fast_api.schemas.schemas import (
     ErrorDetail,
     FilterParams,
     Message,
+)
+from fast_api.schemas.user_schema import (
     UserList,
     UserPublic,
     UserSchema,
@@ -34,7 +36,6 @@ FilterParams = Annotated[FilterParams, Query()]
 async def create_user(
     user: UserSchema,
     session: AsyncSession,
-    current_user: CurrentUser,
 ) -> UserPublic:
     """Cria um novo usuário."""
     existing_user: User | None = await session.scalar(
@@ -75,7 +76,7 @@ async def read_users(
     users = await session.scalars(
         select(User).limit(filter_params.limit).offset(filter_params.offset)
     )
-    return {'users': users}
+    return UserList(users=users)
 
 
 @router.get(
