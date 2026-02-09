@@ -90,7 +90,7 @@ alembic upgrade head
 |----------|-------------------|-------------------------------|--------------|---------------------|
 | GET      | `/`               | Mensagem de boas-vindas       | Não          | 200                 |
 | POST     | `/auth/`          | Obtém token de acesso         | Não          | 200, 401            |
-| POST     | `/users/`         | Cria um usuário               | Sim          | 201, 409            |
+| POST     | `/users/`         | Cria um usuário               | Não          | 201, 409            |
 | GET      | `/users/`         | Lista todos os usuários       | Sim          | 200, 401            |
 | GET      | `/users/{id}`     | Retorna um usuário pelo id    | Sim          | 200, 401, 404       |
 | PUT      | `/users/{id}`     | Atualiza um usuário pelo id   | Sim          | 200, 401, 403, 409  |
@@ -122,11 +122,9 @@ Resposta: `{"access_token": "...", "token_type": "Bearer"}`
   - **Sucesso (200)**: `{"access_token": "string", "token_type": "Bearer"}`
   - **Erro (401)**: `{"detail": "Email ou senha incorretos"}` ou `{"detail": "Senha incorreta"}`
 
-- **POST /users/** — Cria um novo usuário. Requer autenticação.
-  - **Headers**: `Authorization: Bearer <token>`
+- **POST /users/** — Cria um novo usuário. **Pública** (não requer autenticação).
   - **Body**: `{"username": "string", "email": "string", "password": "string"}`
   - **Sucesso (201)**: Retorna o usuário criado: `{"id": int, "username": "string", "email": "string"}`
-  - **Erro (401)**: Token inválido ou ausente: `{"detail": "Could not validate credentials"}`
   - **Erro (409)**: Username ou email já existem: `{"detail": "username já existe!"}` ou `{"detail": "email já existe!"}`
 
 - **GET /users/** — Lista todos os usuários com paginação. Requer autenticação.
