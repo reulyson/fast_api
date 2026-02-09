@@ -4,9 +4,10 @@ from contextlib import contextmanager
 from datetime import datetime
 
 import pytest
+import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from fast_api.app import app
@@ -34,13 +35,13 @@ def client(session):
 
 
 # Fixture para criar uma sessão de teste
-@pytest.fixture
-def session():
-    """Fixture para criar uma sessão de teste."""
+@pytest_asyncio.fixture
+async def session():
+    """Fixture assíncrona para criar uma sessão de teste."""
     # cria um motor de conexão com o banco de dados em memória
-    engine = create_engine(
+    engine = create_async_engine(
         # banco em memória, isolado por teste, sem arquivo
-        'sqlite:///:memory:',
+        'sqlite+aiosqlite:///:memory:',
         # permite usar a conexão em outra thread
         #   (TestClient roda requisições em thread diferente da fixture)
         connect_args={'check_same_thread': False},
@@ -48,17 +49,17 @@ def session():
         #   (evita múltiplos bancos vazios com :memory:)
         poolclass=StaticPool,
     )
-    # cria todas as tabelas no banco de dados
-    table_registry.metadata.create_all(engine)
+
+    # cria todas as tabelas no banco de dado
+    async with engine.begin() as conn:
+        await conn.run_sync(table_registry.metadata.create_all)
     # cria uma sessão de teste
-    with Session(engine) as session:
+    async with AsyncSession(engine, expire_on_commit=False) as session:
         # yield session é um gerador que retorna a sessão de teste
         yield session
     # deleta todas as tabelas no banco de dados
-    table_registry.metadata.drop_all(engine)
-    # Fecha as conexões abertas do SQLite e
-    # desmonta o pool do engine de teste
-    engine.dispose()
+    async with engine.begin() as conn:
+        await conn.run_sync(table_registry.metadata.drop_all)
 
 
 @contextmanager
@@ -90,8 +91,8 @@ def mock_db_time():
     return _mock_db_time
 
 
-@pytest.fixture
-def mock_user(session):
+@pytest_asyncio.fixture
+async def mock_user(session: AsyncSession):
     """Cria um usuário de teste no banco de dados."""
     password = 'testeteste'
     user = User(
@@ -101,8 +102,8 @@ def mock_user(session):
     )
 
     session.add(user)
-    session.commit()
-    session.refresh(user)
+    await session.commit()
+    await session.refresh(user)
 
     # salva no objeto a senha de origem
     user.origin_password = password

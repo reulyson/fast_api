@@ -3,12 +3,16 @@
 from dataclasses import asdict
 from datetime import datetime
 
+import pytest
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from fast_api.models import User
 
 
-def test_create_user_db(session, mock_db_time) -> None:
+# Marca o teste como assíncrono
+@pytest.mark.asyncio
+async def test_create_user_db(session: AsyncSession, mock_db_time) -> None:
     """Testa se o usuário é criado com sucesso."""
     # mocka o tempo do banco de dados
     with mock_db_time(model=User, time=datetime(2026, 1, 1)) as time:
@@ -19,12 +23,15 @@ def test_create_user_db(session, mock_db_time) -> None:
         )
         # add: adiciona o usuário na sessão
         session.add(new_user)
-        # commit: confirma as alterações na sessão
-        # e salva no banco de dados
-        session.commit()
+        # commit: confirma as alterações na sessão e salva no banco de dados
+        await session.commit()
 
         # scalar: faz uma consulta e retorna o primeiro resultado da consulta
-        user = session.scalar(select(User).where(User.username == 'teste'))
+        user = await session.scalar(
+            select(User).where(
+                User.username == 'teste',
+            )
+        )
 
         # verifica se os valores são os esperados
         assert asdict(user) == {
